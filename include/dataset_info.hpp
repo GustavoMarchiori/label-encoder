@@ -6,7 +6,6 @@
 
 struct DatasetInfo {
     streampos size;
-    size_t chunkSize;
 };
 
 extern DatasetInfo Info;
