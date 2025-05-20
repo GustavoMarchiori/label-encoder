@@ -16,23 +16,12 @@ int main() {
     setChunkSize(64, MB);
 
     auto inicio = high_resolution_clock::now();
-
     readLines();
-    /*
-    Stream.file.seekg(0, ios::beg);
-    string line;
-    while (Stream.file.peek() != EOF)
-    {
-        getline(Stream.file, line);
-    }
-    */
-
     auto fim = high_resolution_clock::now();
     duration<double> duracao = fim - inicio;
 
     cout << "Tempo de execucao: " << duracao.count() << " segundos\n";
     
-
     return 0;
 }
 
@@ -41,8 +30,19 @@ void readLines() {
     Stream.file.seekg(0, ios::beg);
     thread::Buffer Buffer;
     reserveBufferMemory(Buffer);
+    string garbage{};
 
-    for (size_t i = 0; i < Metadata.size; i += Chunk.size) {
-        Stream.file.read(&Buffer.lines[0], Chunk.size);
+    int i = 0;
+    while (Stream.file.read(&Buffer.lines[0], Chunk.size) || Stream.file.gcount() > 0) {
+        size_t bytesRead = Stream.file.gcount();
+
+        Buffer.lines.insert(0, garbage);
+
+        size_t lastNewlinePos = Buffer.lines.rfind('\n');
+
+        if (lastNewlinePos != string::npos) {
+            garbage = Buffer.lines.substr(lastNewlinePos + 1);
+            Buffer.lines.erase(lastNewlinePos + 1);
+        }
     }
 }
