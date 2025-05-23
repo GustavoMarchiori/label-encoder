@@ -22,6 +22,7 @@ namespace dataset {
     struct Stream {
         std::fstream file;
         std::ios_base::openmode opMode;
+        std::vector<std::fstream> id_files;
     };
 
     struct Metadata {
@@ -31,7 +32,7 @@ namespace dataset {
     struct Data {
         std::vector<std::string> columnsHeaders;
         size_t columnsCount;
-        std::set<size_t> categoricalColumns;
+        std::vector<std::string> categoricalColumns;
     };
 
 }

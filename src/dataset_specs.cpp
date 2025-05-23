@@ -55,14 +55,19 @@ void getColumnsCount(string line) {
 }
 
 void detectCategoricalColumns() {
+    Data.categoricalColumns.resize(Data.columnsCount, " ");
+    Stream.id_files.resize(Data.categoricalColumns.size());
     regex pattern = regex("[^0-9,.\\s]");
     string columnValue;
 
     for (size_t i = 0; i < 5; i++) {
         for (size_t j = 0; j < Data.columnsCount; j++) {
-            getline(Stream.file, columnValue, ',');
-            if (regex_search(columnValue, pattern)) Data.categoricalColumns.insert(j);
-            else continue;
+            j % Data.columnsCount != 0 ? getline(Stream.file, columnValue, ',') : getline(Stream.file, columnValue, '\n');
+            if (Data.categoricalColumns[j] != " " && regex_search(columnValue, pattern)) {
+                Data.categoricalColumns[j] = Data.columnsHeaders[j];
+                Stream.id_files[j] = move(fstream(columnValue + "_table.csv", ios::out));
+                Stream.id_files[j] << "ID," << columnValue << endl;
+            }
         }   
     }
 }

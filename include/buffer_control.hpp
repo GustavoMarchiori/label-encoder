@@ -22,6 +22,7 @@ namespace thread {
 }
 
 extern thread::Chunk Chunk;
+extern thread::Buffer Buffer;
 
 void setChunkSize(size_t size, DataUnit unit);
 
