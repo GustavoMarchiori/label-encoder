@@ -113,7 +113,7 @@ int main() {
     MEMORYSTATUSEX mem;
     mem.dwLength = sizeof(mem);
     GlobalMemoryStatusEx(&mem);
-    size_t ram = mem.ullAvailPhys * 0.25;
+    size_t ram = mem.ullAvailPhys * 0.01;
 
     // Chunk
     size_t numChunk = ((size_t)fileSize.QuadPart + ram - 1) / ram;
@@ -121,6 +121,7 @@ int main() {
     //Mapeamento dos chunks
     vector<pair<const unsigned char*, const unsigned char*>> chunksPtrs;
     startReadPtr = valuesBegin + 1; endReadPtr = valuesBegin + 1;
+    size_t countLines;
     
     for (size_t i = 1; i <= numChunk; i++) {
         const unsigned char* tentativeEnd = startReadPtr + min(ram, (size_t)(valuesEnd - startReadPtr));
@@ -139,32 +140,39 @@ int main() {
     //Leitura paralelizada
     vector<unordered_map<string, size_t>> uniqueColumnsValues; uniqueColumnsValues.resize(columnsCount);
 
+    #pragma omp parallel for
     for (size_t i = 0; i < chunksPtrs.size(); i++) {
         const unsigned char *localFirst, *localSecond;
         localFirst = chunksPtrs[i].first; localSecond = localFirst;
-        cout << "iteracao" << endl;
+        const unsigned char* chunkEnd = chunksPtrs[i].second;
         string value; char delimitator;
 
-        size_t range = (size_t) chunksPtrs[i].second;
-        while ((size_t) localSecond != range) {
-            for (size_t j = 0; j < columnsCount; j++) {
-            
-                delimitator = (j != columnsCount - 1) ? ',' : '\n';
+        size_t j = 0;
+        while (localFirst < chunkEnd) {
+            if (j == columnsCount) j = 0;
 
-                localSecond = (const unsigned char*) memchr(localFirst, delimitator,  range - (size_t) localFirst);
-                value.assign(localFirst, localSecond); localFirst = localSecond;
+            delimitator = (j != columnsCount - 1) ? ',' : '\n';
 
+            localSecond = (const unsigned char*) memchr(localFirst, delimitator, chunkEnd - localFirst);
+            if (!localSecond) break;
+
+            value.assign(localFirst, localSecond); localFirst = localSecond + 1;
+
+            #pragma omp critical
+            {
                 if (categoricalColumns.find(j) == categoricalColumns.end()) {
                     finalFile << value << delimitator;
-                    continue;
+                } else {
+                    if (uniqueColumnsValues[j].find(value) == uniqueColumnsValues[j].end()) {
+                        uniqueColumnsValues[j][value] = uniqueColumnsValues[j].size();
+                        *encoded_files[j] << uniqueColumnsValues[j][value] << ',' << value << endl;
+                    }
+                    
+                    finalFile << uniqueColumnsValues[j][value] << delimitator;
                 }
-
-                if (uniqueColumnsValues[j].find(value) == uniqueColumnsValues[j].end()) {
-                    uniqueColumnsValues[j][value] = uniqueColumnsValues[j].size();
-                }
-
-                *encoded_files[j] << uniqueColumnsValues[j][value] << ',' << value << endl;
             }
+
+            j++;
         }
     }
 }
